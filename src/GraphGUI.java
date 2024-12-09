@@ -1,6 +1,6 @@
 import java.awt.*;
 import java.awt.event.*;
-import java.util.LinkedList;
+import java.util.*;
 import javax.swing.*;
 
 /**
@@ -22,31 +22,14 @@ public class GraphGUI {
     /** Button for remove node */
     private JButton rmvNodeButton;
 
-    /** Button for add edge */
-    private JButton addEdgeButton;
-
-    /** Button for remove node */
-    private JButton rmvEdgeButton;
-
     /** Button for change text */
     private JButton chgTextButton;
 
     /** Button for change distance */
     private JButton chgDistButton;
 
-    /** Button for Breath-First Traversal */
-    private JButton BFSButton;
 
-    /** Button for Depth-First Traversal */
-    private JButton DFSButton;
-
-    /** Button for Shortest-Path */
-    private JButton spButton;
-
-    /** Button for Topological Sorting */
-    private JButton TPSButton;
-
-    private JButton ctrdButton;
+    private JButton centroidDecomposeButton;
 
     /** Button for Refresh */
     private JButton rfButton;
@@ -55,7 +38,7 @@ public class GraphGUI {
     private InputMode mode = InputMode.ADD_NODES;
 
     /** Remembers node where last mousedown event occurred */
-    private Graph<NodeData,EdgeData>.Node nodeUnderMouse;
+    private Tree<NodeData,EdgeData>.Node nodeUnderMouse;
 
     /**
      *  Schedules a job for the event dispatching thread
@@ -115,14 +98,6 @@ public class GraphGUI {
         panel2.add(rmvNodeButton);
         rmvNodeButton.addActionListener(new RmvNodeListener());
 
-        addEdgeButton = new JButton("Add Edges");
-        panel2.add(addEdgeButton);
-        addEdgeButton.addActionListener(new AddEdgeListener());
-
-        rmvEdgeButton = new JButton("Remove Edges");
-        panel2.add(rmvEdgeButton);
-        rmvEdgeButton.addActionListener(new RmvEdgeListener());
-
         chgTextButton = new JButton("Change Text");
         panel2.add(chgTextButton);
         chgTextButton.addActionListener(new ChgTextListener());
@@ -135,22 +110,11 @@ public class GraphGUI {
 
         // traversal buttons
         JPanel panel3 = new JPanel();
-        panel3.setLayout(new GridLayout(4,1));
-        BFSButton = new JButton("Breath First Traversal");
-        panel3.add(BFSButton);
-        BFSButton.addActionListener(new BFSListener());
+        panel3.setLayout(new GridLayout(1,1));
 
-        DFSButton = new JButton("Depth First Traversal");
-        panel3.add(DFSButton);
-        DFSButton.addActionListener(new DFSListener());
-
-        spButton = new JButton("Shortest Path");
-        panel3.add(spButton);
-        spButton.addActionListener(new SPListener());
-
-        TPSButton = new JButton("Topological Sort");
-        panel3.add(TPSButton);
-        TPSButton.addActionListener(new TPSListener());
+        centroidDecomposeButton = new JButton("Centroid Decomposition");
+        panel3.add(centroidDecomposeButton);
+        centroidDecomposeButton.addActionListener(new CentroidDecomposeListener());
 
         rfButton = new JButton("Refresh");
         panel3.add(rfButton);
@@ -168,9 +132,10 @@ public class GraphGUI {
      *  or a null reference if not
      */
     @SuppressWarnings("unchecked")
-    public Graph<NodeData,EdgeData>.Node findNearbyNode(int x, int y) {
-        Graph.Node nearbyNode = null;
-        for (Graph<NodeData,EdgeData>.Node node:canvas.graph.getNode()){
+
+    public Tree<NodeData,EdgeData>.Node findClosestNode(int x, int y) {
+        Tree.Node nearbyNode = null;
+        for (Tree<NodeData,EdgeData>.Node node : canvas.tree.getNodes()){
             Point p = node.getData().getPosition();
             if (p.distance(x,y)<=40){
                 nearbyNode = node;
@@ -178,10 +143,27 @@ public class GraphGUI {
         }
         return nearbyNode;
     }
+    public Tree<NodeData,EdgeData>.Node findNearestParent(int x, int y) {
+        Tree.Node closestParent = null;
+
+        Point p = new Point(10000,10000);
+        double minDistance = p.distance(x,y);
+
+        for (Tree<NodeData,EdgeData>.Node node : canvas.tree.getNodes()){
+            p = node.getData().getPosition() ;
+
+            if (p.distance(x,y)<=minDistance){
+
+                minDistance = p.distance(x,y);
+                closestParent = node;
+            }
+        }
+        return closestParent;
+    }
 
     /** Constants for recording the input mode */
     enum InputMode {
-        ADD_NODES, RMV_NODES, ADD_EDGES, RMV_EDGES, CHG_TEXT, CHG_DIST, BFS, DFS, S_PATH, TPS
+        ADD_NODES, RMV_NODES, CHG_TEXT, CHG_DIST,
     }
 
     /** Listener for Add Node button */
@@ -199,24 +181,6 @@ public class GraphGUI {
         public void actionPerformed(ActionEvent e) {
             mode = InputMode.RMV_NODES;
             instr.setText("Drag on nodes to remove them.");
-        }
-    }
-
-    /** Listener for Add Edge button */
-    private class AddEdgeListener implements ActionListener {
-        /** Event handler for AddEdge button */
-        public void actionPerformed(ActionEvent e) {
-            mode = InputMode.ADD_EDGES;
-            instr.setText("Drag from one node to another to add an edge.");
-        }
-    }
-
-    /** Listener for Remove Edge button */
-    private class RmvEdgeListener implements ActionListener {
-        /** Event handler for RmvEdge button */
-        public void actionPerformed(ActionEvent e) {
-            mode = InputMode.RMV_EDGES;
-            instr.setText("Drag from one node to another to remove an edge.");
         }
     }
 
@@ -238,45 +202,13 @@ public class GraphGUI {
         }
     }
 
-    /** Listener for Breadth First Traversal button */
-    private class BFSListener implements ActionListener {
-        /** Event handler for Breadth First Traversal button */
+    private class CentroidDecomposeListener implements ActionListener {
         public void actionPerformed(ActionEvent e) {
-            mode = InputMode.BFS;
-            instr.setText("Click one node to start Breath First Traversal from it.");
+            canvas.startCentroidDecomposition();
+            instr.setText("Visualizing centroid decomposition...");
         }
     }
 
-    /** Listener for Depth First Traversal button */
-    private class DFSListener implements ActionListener {
-        /** Event handler for Depth First Traversal button */
-        public void actionPerformed(ActionEvent e) {
-            mode = InputMode.DFS;
-            instr.setText("Click one node to start Depth First Traversal from it.");
-        }
-    }
-
-    /** Listener for Shortest Path button */
-    private class SPListener implements ActionListener {
-        /** Event handler for Shortest Path button */
-        public void actionPerformed(ActionEvent e) {
-            mode = InputMode.S_PATH;
-            instr.setText("Drag from one node to another to find their shortest path.");
-        }
-    }
-
-    /** Listener for Topological Sort button */
-    private class TPSListener implements ActionListener {
-        /** Event handler for Topological Sort button */
-        public void actionPerformed(ActionEvent e) {
-            mode = InputMode.TPS;
-            String text = "";
-            for (NodeData s: canvas.graph.topologicalSort()){
-                text = text + s.getText() + " ";
-            }
-            instr.setText("You should take classes in the following order: "+text);
-        }
-    }
 
     /** Listener for Refresh Path button */
     private class RFListener implements ActionListener {
@@ -285,14 +217,10 @@ public class GraphGUI {
             canvas.refresh();
             addNodeButton.setEnabled(true);
             rmvNodeButton.setEnabled(true);
-            addEdgeButton.setEnabled(true);
-            rmvEdgeButton.setEnabled(true);
+
             chgTextButton.setEnabled(true);
             chgDistButton.setEnabled(true);
-            BFSButton.setEnabled(true);
-            DFSButton.setEnabled(true);
-            spButton.setEnabled(true);
-            TPSButton.setEnabled(true);
+
             instr.setText("Try functions by clicking buttons.");
         }
     }
@@ -303,23 +231,34 @@ public class GraphGUI {
         /** Responds to click event depending on mode */
         @SuppressWarnings("unchecked")
         public void mouseClicked(MouseEvent e) {
-            Graph<NodeData,EdgeData>.Node nearbyNode = findNearbyNode(e.getX(),e.getY());
+            Tree<NodeData,EdgeData>.Node closestNode = findClosestNode(e.getX(),e.getY());
+            Tree<NodeData,EdgeData>.Node closestParent = findNearestParent(e.getX(),e.getY());
             boolean work = false;
             switch (mode) {
                 case ADD_NODES:
-                    if (nearbyNode==null){
-                            char c = (char)(canvas.graph.numNodes()%26+65);
-                            canvas.graph.addNode(new NodeData(e.getPoint(),Character.toString(c)));
+                    if (closestNode==null){
+                            char c = (char)(canvas.tree.numNodes()%26+65);
+                            if (!canvas.tree.getNodes().isEmpty()){
+                                canvas.tree.addNode((new NodeData(e.getPoint(),Character.toString(c))));
+                                //canvas.repaint();
+                                Tree<NodeData,EdgeData>.Node thisNode = findClosestNode(e.getX(),e.getY());
+                                //Tree<NodeData,EdgeData>.Node nearbyNode = findClosestNode(e.getX(),e.getY());
+                                canvas.tree.addEdge((new EdgeData(-1.0)),closestParent, thisNode);
+                                //canvas.tree.addEdge((new EdgeData(-1.0)),thisNode, closestParent);
+                                work = true;
+                            } else{
+                                canvas.tree.addNode(new NodeData(e.getPoint(),Character.toString(c)));
+                                work = true;
+                            }
                             canvas.repaint();
-                            work = true;
                         }
                     if (!work){
                         Toolkit.getDefaultToolkit().beep();
                     }
                     break;
                 case RMV_NODES:
-                    if (nearbyNode!=null){
-                        canvas.graph.removeNode(nearbyNode);
+                    if (closestNode!=null){
+                        canvas.tree.removeNode(closestNode);
                         canvas.repaint();
                         work = true;
                     }
@@ -327,32 +266,14 @@ public class GraphGUI {
                         Toolkit.getDefaultToolkit().beep();
                     }
                     break;
-                case BFS:
-                    if (nearbyNode!=null){
-                        (new TraversalThread(canvas.graph.BFS(nearbyNode))).execute();
-                        work = true;
-                    }
-                    if (!work){
-                        Toolkit.getDefaultToolkit().beep();
-                    }
-                    break;
-                case DFS:
-                    if (nearbyNode!=null) {
-                        (new TraversalThread(canvas.graph.DFS(nearbyNode))).execute();
-                        work = true;
-                    }
-                    if (!work) {
-                        Toolkit.getDefaultToolkit().beep();
-                    }
-                    break;
                 case CHG_TEXT:
-                    if (nearbyNode!=null) {
+                    if (closestNode!=null) {
                         while (!work) {
                             try {
                                 JFrame frame = new JFrame("Enter a text");
                                 String text = JOptionPane.showInputDialog(frame, "Please enter the text on this node.");
                                 if (text != null) {
-                                    nearbyNode.getData().setText(text);
+                                    closestNode.getData().setText(text);
                                     canvas.repaint();
                                     work = true;
                                 } else {
@@ -371,7 +292,7 @@ public class GraphGUI {
          * Record point under mouse, if any
          */
         public void mousePressed(MouseEvent e) {
-            nodeUnderMouse = findNearbyNode(e.getX(),e.getY());
+            nodeUnderMouse = findClosestNode(e.getX(),e.getY());
         }
 
         /**
@@ -380,51 +301,18 @@ public class GraphGUI {
          */
         @SuppressWarnings("unchecked")
         public void mouseReleased(MouseEvent e) {
-            Graph<NodeData,EdgeData>.Node nearbyNode = findNearbyNode(e.getX(),e.getY());
+            Tree<NodeData,EdgeData>.Node closestNode = findClosestNode(e.getX(),e.getY());
+            Tree<NodeData,EdgeData>.Node closestParent = findNearestParent(e.getX(),e.getY());
             boolean work = false;
             switch (mode) {
-                case ADD_EDGES:
-                    if (nodeUnderMouse != null && nearbyNode != null && nearbyNode != nodeUnderMouse) {
-                        // the user don't have to enter the distance now, the program will calculate the pixel distance
-                        canvas.graph.addEdge((new EdgeData(-1.0)),nodeUnderMouse,nearbyNode);
-                        canvas.repaint();
-                        work = true;
-                    }
-                    if (!work) {
-                        Toolkit.getDefaultToolkit().beep();
-                    }
-                    break;
-                case RMV_EDGES:
-                    if (nodeUnderMouse != null) {
-                        Graph.Edge edge = nodeUnderMouse.edgeTo(nearbyNode);
-                        if (edge != null) {
-                            canvas.graph.removeEdge(edge);
-                            canvas.repaint();
-                            work = true;
-                        }
-                    }
-                    if (!work) {
-                        Toolkit.getDefaultToolkit().beep();
-                    }
-                    break;
-                case S_PATH:
-                    if (nodeUnderMouse != null && nearbyNode != null && nodeUnderMouse != nearbyNode) {
-                        LinkedList<Graph<NodeData, EdgeData>.Edge> path = canvas.graph.distances(nodeUnderMouse, nearbyNode);
-                        (new TraversalThread(path)).execute();
-                        if (path != null && !path.isEmpty()) {
-                            instr.setText(" The shortest distance between "
-                                    + nodeUnderMouse.getData().getText() + " and " + nearbyNode.getData().getText()
-                                    + " is " + canvas.graph.distances(nodeUnderMouse).get(nearbyNode) + ".");
-                        }
-                        work = true;
-                    }
-                    if (!work) {
-                        Toolkit.getDefaultToolkit().beep();
-                    }
-                    break;
+
                 case CHG_DIST:
-                    if (nodeUnderMouse != null && nearbyNode !=null){
-                        Graph<NodeData,EdgeData>.Edge edge = nodeUnderMouse.edgeTo(nearbyNode);
+                    //Tree<NodeData,EdgeData>.Node thisNode = findClosestNode(e.getX(),e.getY());
+                    if (closestNode != null && nodeUnderMouse !=null){
+                        System.out.println("Node under mouse: " + nodeUnderMouse.getData().getText());
+                        System.out.println("Closest node: : " + closestNode.getData().getText());
+                        Tree<NodeData,EdgeData>.Edge edge = nodeUnderMouse.edgeTo(closestNode);
+                        System.out.println("Edge in quesion: " + edge.getData().getDistance());
                         if (edge != null) {
                             while (!work) {
                                 try {
@@ -456,7 +344,6 @@ public class GraphGUI {
                 canvas.repaint();
             }
         }
-
         // Empty but necessary to comply with MouseMotionListener interface.
         public void mouseMoved(MouseEvent e) {
             nodeUnderMouse = null;
@@ -465,41 +352,31 @@ public class GraphGUI {
 
     /** Worker class for doing traversals */
     private class TraversalThread extends SwingWorker<Boolean, Object> {
-        /** The path that needs to paint */
-        private LinkedList<Graph<NodeData,EdgeData>.Edge> path;
 
-        /** The Constructor of TraversalThread */
-        public TraversalThread(LinkedList<Graph<NodeData,EdgeData>.Edge> path){
-            this.path = path;
-        }
 
         @Override
         public Boolean doInBackground() {
             addNodeButton.setEnabled(false);
             rmvNodeButton.setEnabled(false);
-            addEdgeButton.setEnabled(false);
-            rmvEdgeButton.setEnabled(false);
             chgTextButton.setEnabled(false);
             chgDistButton.setEnabled(false);
-            BFSButton.setEnabled(false);
-            DFSButton.setEnabled(false);
-            spButton.setEnabled(false);
-            TPSButton.setEnabled(false);
+            centroidDecomposeButton.setEnabled(false);
             rfButton.setEnabled(false);
-            return canvas.paintTraversal(path);
+            //return canvas.paintTraversal(path);
+            return false;
         }
 
         @Override
         protected void done() {
-            try {
-                if (path.isEmpty() && path != null) {  // test the result of doInBackground()
-                    instr.setText("There is no path. Please refresh.");
-                }
-                rfButton.setEnabled(true);
-
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+//            try {
+//                if (path.isEmpty() && path != null) {  // test the result of doInBackground()
+//                    instr.setText("There is no path. Please refresh.");
+//                }
+//                rfButton.setEnabled(true);
+//
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//            }
         }
     }
 
